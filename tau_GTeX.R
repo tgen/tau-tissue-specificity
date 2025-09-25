@@ -15,9 +15,6 @@
 library(tidyverse)
 library(ggpubr)
 library(edgeR)
-#toolkitPath <- "~/Dropbox/repos/toolkit_ehutchins/"
-#source(paste(toolkitPath, "R-functions/createColorPalettes.R", sep = ""))
-#source(paste(toolkitPath, "R-functions/biotypePlotter.R", sep = ""))
 library(rtracklayer)
 library(devtools)
 
@@ -108,9 +105,6 @@ gencode.anno$gene_biotype[gencode.anno$gene_type %in% pseudogeneBiotypes] <- "ps
 gencode.anno$gene_biotype[gencode.anno$gene_type %in% TECbiotypes] <- "TEC"
 unique(gencode.anno$gene_biotype)
 
-#countMatGtex.wb.anno <- right_join(gencode.anno, countMatGtex.wb, by = c("gene_id" = "Name"))
-#head(countMatGtex.wb.anno[,c(1:10)])
-
 
 #CPM normalization
 countTable <- gtex.cnts %>% select(-Description) %>%
@@ -120,6 +114,7 @@ cpmTable.longer <- cpmTable %>% as.data.frame() %>% rownames_to_column(var = "ge
   pivot_longer(-gene_id, values_to = "CPM", names_to = "SAMPID") %>%
   left_join(attributes %>% select(SAMPID, SMTS, SMTSD))
 
+#remove cell lines (keep tissues)
 cpmTable.longer.filt <- cpmTable.longer %>% filter(!SMTSD %in% c("Cells - EBV-transformed lymphocytes",
                                                                  "Cells - Leukemia cell line (CML)",
                                                                  "Cells - Cultured fibroblasts"))
@@ -133,7 +128,7 @@ cpmTable.meanTissue <- cpmTable.longer.filt %>%
   pivot_wider(names_from = "SMTS", values_from = "meanCPM")
 
 #normalization
-#meanExp <- cpmTable.meanTissue %>% column_to_rownames(var = "gene_id")
+#filter out reproductive tissues
 meanExp <- cpmTable.meanTissue %>%
   select(-Breast, -`Cervix Uteri`, -`Fallopian Tube`, -Ovary, -Prostate, -Testis, -Uterus, -Vagina) %>%
   column_to_rownames(var = "gene_id")
@@ -146,6 +141,7 @@ head(qnExp[,1:5], n=5)
 tauExp <- calcTau(qnExp) 
 head(tauExp[,1:5], n=5)
 
+#add gene biotypes, names
 tauAnno <- right_join(gencode.anno, rownames_to_column(tauExp, var = "gene_id")) %>%
   column_to_rownames(var = "gene_id") %>%
   rename("gene_name" = "external_gene_name") %>%
